@@ -1,0 +1,51 @@
+{
+  "modbusHost": "192.168.0.101",
+  "modbusPort": 502,
+  "modbusBaseRegister": 1000,
+  "gpsMode": "off",
+  "uartPath": "COM3",
+  "uartBaudRate": 9600,
+  "simulation": false,
+  "deviceTags": [
+    {
+      "id": 1,
+      "tag": "WGD-01"
+    },
+    {
+      "id": 2,
+      "tag": ""
+    },
+    {
+      "id": 3,
+      "tag": ""
+    },
+    {
+      "id": 4,
+      "tag": ""
+    },
+    {
+      "id": 5,
+      "tag": ""
+    },
+    {
+      "id": 6,
+      "tag": ""
+    },
+    {
+      "id": 7,
+      "tag": ""
+    },
+    {
+      "id": 8,
+      "tag": ""
+    },
+    {
+      "id": 9,
+      "tag": ""
+    },
+    {
+      "id": 10,
+      "tag": ""
+    }
+  ]
+}

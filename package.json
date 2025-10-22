@@ -1,0 +1,23 @@
+{
+  "name": "site_survey_tool",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "server",
+    "client",
+    "shared"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run -w server dev\" \"npm run -w client dev\"",
+    "build": "npm run -w shared build && npm run -w server build && npm run -w client build",
+    "lint": "eslint .",
+    "format": "prettier --write ."
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.1",
+    "eslint": "^9.12.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-react-hooks": "^5.1.0-rc.0",
+    "prettier": "^3.3.3"
+  }
+}
