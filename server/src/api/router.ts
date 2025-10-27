@@ -6,6 +6,7 @@ import path from 'path';
 import fs from 'fs';
 import dayjs from 'dayjs';
 import { computeStats, parseCsv, buildSeries } from '../utils/csvStats';
+import { getMeasurementsDir } from '../utils/paths';
 
 export const router = Router();
 
@@ -70,7 +71,7 @@ router.post('/gps/mobile', (req, res) => {
 });
 
 router.get('/measurements', (_req, res) => {
-  const dir = path.resolve(__dirname, '../../data/measurements');
+  const dir = getMeasurementsDir();
   if (!fs.existsSync(dir)) return res.json([]);
   const files = fs.readdirSync(dir).filter((f) => f.endsWith('.csv'));
   const list = files.map((f, idx) => {
@@ -112,14 +113,14 @@ router.get('/measurements', (_req, res) => {
 
 router.get('/measurements/:file', (req, res) => {
   const file = req.params.file;
-  const full = path.resolve(__dirname, '../../data/measurements', file);
+  const full = path.resolve(getMeasurementsDir(), file);
   if (!fs.existsSync(full)) return res.status(404).send('Not found');
   res.sendFile(full);
 });
 
 router.get('/measurements/:file/details', (req, res) => {
   const file = req.params.file;
-  const full = path.resolve(__dirname, '../../data/measurements', file);
+  const full = path.resolve(getMeasurementsDir(), file);
   if (!fs.existsSync(full)) return res.status(404).send('Not found');
   try {
     const rows = parseCsv(full);
@@ -133,7 +134,7 @@ router.get('/measurements/:file/details', (req, res) => {
 
 router.delete('/measurements/:file', (req, res) => {
   const file = req.params.file;
-  const full = path.resolve(__dirname, '../../data/measurements', file);
+  const full = path.resolve(getMeasurementsDir(), file);
   if (!fs.existsSync(full)) return res.status(404).send('Not found');
   fs.unlinkSync(full);
   res.json({ status: 'deleted' });

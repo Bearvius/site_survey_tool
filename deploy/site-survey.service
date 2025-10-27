@@ -6,13 +6,14 @@ After=network-online.target
 [Service]
 Type=simple
 # Change this user to the service account you created on the Pi
-User=sitesurvey
+User=admin
 
 # Change this to the absolute path where you store the app on the Pi
 WorkingDirectory=/opt/site_survey_tool
 
 Environment=NODE_ENV=production
 Environment=PORT=4000
+Environment=DATA_DIR=/var/lib/site-survey/measurements
 
 # Path to Node binary on Raspberry Pi OS
 ExecStart=/usr/bin/node server/dist/index.js
@@ -28,6 +29,9 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=full
 ProtectHome=true
+
+# Create and own /var/lib/site-survey for persistent data (owned by service user)
+StateDirectory=site-survey
 
 [Install]
 WantedBy=multi-user.target

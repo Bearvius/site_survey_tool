@@ -5,6 +5,7 @@ import { settingsService } from './settingsService';
 import { modbusPoller } from './modbusPoller';
 import { simulateDevices, simulateGps } from './simulationService';
 import { gpsService } from './gpsService';
+import { getMeasurementsDir } from '../utils/paths';
 
 type LiveDevice = { id: number; tag?: string; rssi: number; per: number };
 type LiveGps = { lat?: number; lon?: number; fix: boolean; source: 'external' | 'mobile' | 'off' };
@@ -106,8 +107,7 @@ class MeasurementService {
     gpsService.stop();
 
     // write CSV
-  const dir = path.resolve(__dirname, '../../data/measurements');
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    const dir = getMeasurementsDir({ ensure: true });
     const tsStr = dayjs(this.startTs).format('YYYY-MM-DD_HH-mm-ss');
     const safeName = this.location.replace(/[^a-zA-Z0-9-_]/g, '_');
     const filename = `${safeName}_${tsStr}.csv`;
