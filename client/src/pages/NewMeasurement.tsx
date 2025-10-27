@@ -96,6 +96,7 @@ export default function NewMeasurement() {
   }
 
   const durationText = live ? (live.durationSec < 60 ? `${live.durationSec}s` : `${Math.floor(live.durationSec / 60)}m`) : '0s';
+  const mobileGpsUrl = `${window.location.protocol}//${window.location.host}/mobile-gps`;
 
   return (
     <div style={{ display: 'grid', gap: 12 }}>
@@ -108,6 +109,19 @@ export default function NewMeasurement() {
       <div>
         <ChartLive series={series} />
       </div>
+      {live?.gps?.source === 'mobile' && (
+        <div style={{ padding: 10, border: '1px dashed #bbb', borderRadius: 6 }}>
+          <div style={{ fontWeight: 600, marginBottom: 6 }}>Mobile GPS mode active</div>
+          <div style={{ marginBottom: 6 }}>
+            If location isn’t updating on this device, open this URL on your phone to send GPS to the server while the measurement runs:
+          </div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <a href={mobileGpsUrl} target="_blank" rel="noreferrer">{mobileGpsUrl}</a>
+            <button onClick={() => navigator.clipboard?.writeText(mobileGpsUrl)}>Copy link</button>
+          </div>
+          <div style={{ marginTop: 6, color: '#555' }}>Tip: Many browsers require HTTPS for geolocation (except localhost).</div>
+        </div>
+      )}
       {/* Per-device indicators for latest RSSI and PER */}
       <div>
         <h4>Live device values</h4>

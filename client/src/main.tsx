@@ -22,10 +22,12 @@ function App() {
           <Route path="/new" element={<NewMeasurement />} />
           <Route path="/measurements" element={<MeasurementList />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/mobile-gps" element={<MobileGps />} />
         </Routes>
       </main>
     </BrowserRouter>
   );
 }
+  import MobileGps from './pages/MobileGps';
 
 createRoot(document.getElementById('root')!).render(<App />);
