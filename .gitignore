@@ -25,3 +25,6 @@ server/data/**/*.csv
 server/data/**/*.json
 !server/data/.gitkeep
 !server/data/measurements/.gitkeep
+
+# Vite cache (avoid OneDrive locking issues and unnecessary commits)
+client/.vite-cache/
