@@ -48,7 +48,7 @@ export default function MobileGps() {
   return (
     <div style={{ padding: 16 }}>
       <h2>Mobile GPS Companion</h2>
-      <p>This page continuously shares your device location with the Site Survey server while a measurement is running.</n+></p>
+  <p>This page continuously shares your device location with the Site Survey server while a measurement is running.</p>
       <ul>
         <li>Keep this page open during the measurement.</li>
         <li>Grant location permission when prompted.</li>

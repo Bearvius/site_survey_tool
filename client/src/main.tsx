@@ -5,6 +5,7 @@ import MainMenu from './pages/MainMenu';
 import NewMeasurement from './pages/NewMeasurement';
 import MeasurementList from './pages/MeasurementList';
 import SettingsPage from './pages/SettingsPage';
+import MobileGps from './pages/MobileGps';
 
 function App() {
   return (
@@ -28,6 +29,5 @@ function App() {
     </BrowserRouter>
   );
 }
-  import MobileGps from './pages/MobileGps';
 
 createRoot(document.getElementById('root')!).render(<App />);
