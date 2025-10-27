@@ -86,3 +86,30 @@ sudo systemctl restart site-survey.service
 - Serial access denied: ensure the service user is in `dialout` and UART is enabled (`raspi-config`)
 - Client assets stale: re-run `npm run build` and restart the service
 - Node version: verify `node -v` (prefer 20.x)
+
+## 7) One-command update script (optional)
+
+You can use `deploy/update.sh` to automate the update flow. Copy it to the Pi and make it executable:
+
+```bash
+sudo cp deploy/update.sh /usr/local/bin/site-survey-update
+sudo chmod +x /usr/local/bin/site-survey-update
+```
+
+Run it (defaults to `/opt/site_survey_tool` and service `site-survey.service`):
+
+```bash
+site-survey-update
+```
+
+You can override the app directory by passing it as the first argument, and the service name via env var:
+
+```bash
+SERVICE_NAME=site-survey.service site-survey-update /opt/site_survey_tool
+```
+
+What it does:
+- `git pull` (falls back to `git fetch` + `reset --hard origin/main` if needed)
+- `npm ci` (deterministic install)
+- `npm run build`
+- `systemctl restart site-survey.service` and prints status
