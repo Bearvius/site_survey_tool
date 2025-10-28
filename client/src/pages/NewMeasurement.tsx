@@ -106,7 +106,7 @@ export default function NewMeasurement() {
       </label>
       <div>Timestamp: {new Date().toLocaleString()}</div>
       <div>Duration: {durationText}</div>
-      <div>
+      <div className="card">
         <ChartLive series={series} />
       </div>
       {live?.gps?.source === 'mobile' && (
@@ -123,17 +123,17 @@ export default function NewMeasurement() {
         </div>
       )}
       {/* Per-device indicators for latest RSSI and PER */}
-      <div>
-        <h4>Live device values</h4>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+      <div className="card">
+        <h4 style={{ marginTop: 0 }}>Live device values</h4>
+        <div className="tiles">
           {(live?.devices ?? []).sort((a, b) => a.id - b.id).map((d) => {
             const rssi = Math.round(d.rssi);
             const per = Math.round(d.per);
             const rssiColor = rssi >= thresholds.rssiGood ? '#1a7f37' : rssi >= thresholds.rssiWarn ? '#b8860b' : '#b22222';
             const perColor = per <= thresholds.perGood ? '#1a7f37' : per <= thresholds.perWarn ? '#b8860b' : '#b22222';
             return (
-              <div key={d.id} style={{ border: '1px solid #ddd', borderRadius: 6, padding: '8px 10px', minWidth: 160 }}>
-                <div style={{ fontWeight: 600 }}>D{d.id}{d.tag ? ` • ${d.tag}` : ''}</div>
+              <div key={d.id} className="tile">
+                <div className="title">D{d.id}{d.tag ? ` • ${d.tag}` : ''}</div>
                 <div style={{ color: rssiColor }}>RSSI: {rssi} dBm</div>
                 <div style={{ color: perColor }}>PER: {per}%</div>
               </div>
@@ -142,12 +142,12 @@ export default function NewMeasurement() {
         </div>
       </div>
       <GpsStatus source={live?.gps?.source ?? 'off'} fix={live?.gps?.fix} lat={live?.gps?.lat} lon={live?.gps?.lon} />
-      <div style={{ display: 'flex', gap: 8, justifyContent: 'space-between' }}>
-        <button onClick={onPause} disabled={!canControl}>
+      <div className="flex gap-8 justify-between">
+        <button className="btn" onClick={onPause} disabled={!canControl}>
           {paused ? 'Resume' : 'Pause'}
         </button>
-        <button onClick={() => canControl && setConfirm({ action: 'stop', text: 'Stop and save measurement?' })} disabled={!canControl}>Stop</button>
-        <button onClick={() => setConfirm({ action: 'cancel', text: 'Cancel measurement without saving?' })}>Cancel</button>
+        <button className="btn btn-primary" onClick={() => canControl && setConfirm({ action: 'stop', text: 'Stop and save measurement?' })} disabled={!canControl}>Stop</button>
+        <button className="btn btn-danger" onClick={() => setConfirm({ action: 'cancel', text: 'Cancel measurement without saving?' })}>Cancel</button>
       </div>
       <ConfirmDialog
         open={!!confirm}

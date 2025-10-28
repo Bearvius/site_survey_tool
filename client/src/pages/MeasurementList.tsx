@@ -36,7 +36,8 @@ export default function MeasurementList() {
       {items.length === 0 ? (
         <div>No measurements found</div>
       ) : (
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <div className="table-container">
+        <table className="table">
           <thead>
             <tr>
               <th>#</th>
@@ -58,19 +59,18 @@ export default function MeasurementList() {
                 <td>{i.avgRssi} dBm</td>
                 <td>{i.avgPer}%</td>
                 <td>
-                  <button onClick={() => { setView(i); setDetails(null); api.get(`/measurements/${i.filename}/details`).then((r) => setDetails(r.data)); }}>View</button>{' '}
-                  <button onClick={() => setConfirm(i)}>Delete</button>
+                  <button className="btn" onClick={() => { setView(i); setDetails(null); api.get(`/measurements/${i.filename}/details`).then((r) => setDetails(r.data)); }}>View</button>{' '}
+                  <button className="btn btn-danger" onClick={() => setConfirm(i)}>Delete</button>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+        </div>
       )}
       <div style={{ marginTop: 12 }}>
-        <a href="#/new">
-          <button onClick={() => (window.location.href = '/new')}>New Measurement</button>
-        </a>
-        <button style={{ marginLeft: 8 }} onClick={() => nav('/')}>Back</button>
+        <a href="#/new"><button className="btn btn-primary" onClick={() => (window.location.href = '/new')}>New Measurement</button></a>
+        <button className="btn" style={{ marginLeft: 8 }} onClick={() => nav('/')}>Back</button>
       </div>
       {view && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'grid', placeItems: 'center' }}>
@@ -87,7 +87,7 @@ export default function MeasurementList() {
                 {/* Per-device average indicators with colors */}
                 <div style={{ marginTop: 8 }}>
                   <h4>Per-device averages</h4>
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <div className="tiles">
                     {details.series.map((s: any) => {
                       // compute averages for this device
                       const avgRssi = Math.round((s.points.reduce((acc: number, p: any) => acc + p.rssi, 0) / Math.max(1, s.points.length)));
@@ -95,8 +95,8 @@ export default function MeasurementList() {
                       const rssiColor = avgRssi >= thresholds.rssiGood ? '#1a7f37' : avgRssi >= thresholds.rssiWarn ? '#b8860b' : '#b22222';
                       const perColor = avgPer <= thresholds.perGood ? '#1a7f37' : avgPer <= thresholds.perWarn ? '#b8860b' : '#b22222';
                       return (
-                        <div key={s.deviceId} style={{ border: '1px solid #ddd', borderRadius: 6, padding: '8px 10px', minWidth: 160 }}>
-                          <div style={{ fontWeight: 600 }}>D{s.deviceId}{s.tag ? ` • ${s.tag}` : ''}</div>
+                        <div key={s.deviceId} className="tile">
+                          <div className="title">D{s.deviceId}{s.tag ? ` • ${s.tag}` : ''}</div>
                           <div style={{ color: rssiColor }}>Avg RSSI: {avgRssi} dBm</div>
                           <div style={{ color: perColor }}>Avg PER: {avgPer}%</div>
                         </div>
@@ -113,7 +113,7 @@ export default function MeasurementList() {
             )}
             <a href={`/api/measurements/${view.filename}`} target="_blank">Download CSV</a>
             <div style={{ marginTop: 8, textAlign: 'right' }}>
-              <button onClick={() => { setView(null); setDetails(null); }}>Close</button>
+              <button className="btn" onClick={() => { setView(null); setDetails(null); }}>Close</button>
             </div>
           </div>
         </div>

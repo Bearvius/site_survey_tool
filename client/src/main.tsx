@@ -6,6 +6,7 @@ import NewMeasurement from './pages/NewMeasurement';
 import MeasurementList from './pages/MeasurementList';
 import SettingsPage from './pages/SettingsPage';
 import MobileGps from './pages/MobileGps';
+import './styles.css';
 
 function App() {
   return (

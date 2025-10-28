@@ -46,16 +46,16 @@ export default function MobileGps() {
   }, []);
 
   return (
-    <div style={{ padding: 16 }}>
-      <h2>Mobile GPS Companion</h2>
+    <div className="card" style={{ padding: 16 }}>
+      <h2 style={{ marginTop: 0 }}>Mobile GPS Companion</h2>
   <p>This page continuously shares your device location with the Site Survey server while a measurement is running.</p>
       <ul>
         <li>Keep this page open during the measurement.</li>
         <li>Grant location permission when prompted.</li>
         <li>For best compatibility, use HTTPS when accessing this page.</li>
       </ul>
-      {status && <div style={{ color: '#555', marginTop: 8 }}>{status}</div>}
-      {error && <div style={{ color: '#b22222', marginTop: 8 }}>{error}</div>}
+  {status && <div className="mt-8" style={{ color: '#555' }}>{status}</div>}
+  {error && <div className="mt-8" style={{ color: '#b22222' }}>{error}</div>}
       <div style={{ marginTop: 12 }}>
         <div>Current device: {navigator.userAgent}</div>
         <div>Page URL: {window.location.href}</div>

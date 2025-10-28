@@ -1,0 +1,101 @@
+:root {
+  --bg: #f7f9fc;
+  --card-bg: #fff;
+  --border: #e2e8f0;
+  --text: #1f2937;
+  --muted: #6b7280;
+  --primary: #2563eb;
+  --primary-contrast: #fff;
+  --danger: #dc2626;
+  --danger-contrast: #fff;
+  --warn: #b8860b;
+  --good: #1a7f37;
+}
+
+html, body, #root { height: 100%; }
+body {
+  margin: 0;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  color: var(--text);
+  background: var(--bg);
+  -webkit-tap-highlight-color: transparent;
+}
+
+header { background: var(--card-bg); }
+nav a { padding: 8px 10px; display: inline-block; font-size: 16px; }
+
+main { max-width: 1100px; margin: 0 auto; }
+
+/* Buttons */
+button {
+  font-size: 16px;
+  line-height: 1.2;
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: #fff;
+  cursor: pointer;
+  min-height: 44px; /* touch target */
+}
+button:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn-primary { background: var(--primary); color: var(--primary-contrast); border-color: var(--primary); }
+.btn-danger { background: var(--danger); color: var(--danger-contrast); border-color: var(--danger); }
+.btn-secondary { background: #f1f5f9; }
+
+/* Inputs */
+input, select {
+  font-size: 16px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 44px;
+}
+label { display: block; font-weight: 600; }
+label > input, label > select { margin-top: 6px; }
+
+/* Cards */
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+/* Tiles */
+.tiles { display: flex; flex-wrap: wrap; gap: 10px; }
+.tile {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  min-width: 160px;
+  background: var(--card-bg);
+}
+.tile .title { font-weight: 700; margin-bottom: 4px; }
+
+/* Table */
+.table-container { overflow-x: auto; background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; }
+table.table { width: 100%; border-collapse: collapse; }
+table.table th, table.table td { padding: 12px; border-bottom: 1px solid var(--border); text-align: left; }
+table.table thead th { background: #f8fafc; font-weight: 700; }
+table.table tbody tr:hover { background: #f9fafb; }
+
+/* Modal panel helper */
+.modal-panel { background: var(--card-bg); padding: 16px; border-radius: 12px; max-width: 900px; width: 92%; }
+
+/* Spacing utilities */
+.mt-8 { margin-top: 8px; }
+.mt-12 { margin-top: 12px; }
+.mb-8 { margin-bottom: 8px; }
+.mb-12 { margin-bottom: 12px; }
+.flex { display: flex; }
+.justify-between { justify-content: space-between; }
+.items-center { align-items: center; }
+.gap-8 { gap: 8px; }
+.gap-12 { gap: 12px; }
+
+@media (max-width: 600px) {
+  nav a { padding: 10px 12px; font-size: 18px; }
+  button, input, select { font-size: 18px; }
+}
