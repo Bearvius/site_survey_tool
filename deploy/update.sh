@@ -27,11 +27,16 @@ git pull --ff-only || {
   git reset --hard origin/main
 }
 
-echo "[update] Installing dependencies with npm ci..."
-npm ci
+echo "[update] Installing dependencies per package (shared/server/client)..."
+# Use --prefix when available; fall back to subshell cd
+npm ci --prefix shared || (cd shared && npm ci)
+npm ci --prefix server || (cd server && npm ci)
+npm ci --prefix client || (cd client && npm ci)
 
-echo "[update] Building project..."
-npm run build
+echo "[update] Building packages..."
+npm run build --prefix shared || (cd shared && npm run build)
+npm run build --prefix server || (cd server && npm run build)
+npm run build --prefix client || (cd client && npm run build)
 
 restart_cmd=(systemctl restart "$SERVICE_NAME")
 status_cmd=(systemctl status "$SERVICE_NAME" --no-pager --full)

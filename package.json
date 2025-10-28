@@ -8,8 +8,8 @@
     "shared"
   ],
   "scripts": {
-    "dev": "concurrently \"npm run -w server dev\" \"npm run -w client dev\"",
-    "build": "npm run -w shared build && npm run -w server build && npm run -w client build",
+    "dev": "concurrently \"npm --prefix server run dev\" \"npm --prefix client run dev\"",
+    "build": "npm --prefix shared run build && npm --prefix server run build && npm --prefix client run build",
     "lint": "eslint .",
     "format": "prettier --write ."
   },
