@@ -10,6 +10,7 @@ type LiveMsg = {
   durationSec: number;
   devices: { id: number; tag?: string; rssi: number; per: number }[];
   gps?: { source: 'external' | 'mobile' | 'off'; fix: boolean; lat?: number; lon?: number };
+  fault?: { gateway: boolean; message?: string };
 };
 
 export default function NewMeasurement() {
@@ -106,6 +107,12 @@ export default function NewMeasurement() {
       </label>
       <div>Timestamp: {new Date().toLocaleString()}</div>
       <div>Duration: {durationText}</div>
+      {live?.fault?.gateway && (
+        <div className="card" style={{ borderColor: '#b8860b', background: '#fff8e1' }}>
+          <div style={{ fontWeight: 700, color: '#b8860b' }}>Gateway communication fault</div>
+          <div style={{ color: '#6b7280' }}>{live.fault.message || 'No data received from wireless gateway.'}</div>
+        </div>
+      )}
       <div className="card">
         <ChartLive series={series} />
       </div>

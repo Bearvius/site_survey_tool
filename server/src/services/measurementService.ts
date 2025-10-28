@@ -9,7 +9,7 @@ import { getMeasurementsDir } from '../utils/paths';
 
 type LiveDevice = { id: number; tag?: string; rssi: number; per: number };
 type LiveGps = { lat?: number; lon?: number; fix: boolean; source: 'external' | 'mobile' | 'off' };
-type LiveSample = { timestamp: string; durationSec: number; devices: LiveDevice[]; gps?: LiveGps };
+type LiveSample = { timestamp: string; durationSec: number; devices: LiveDevice[]; gps?: LiveGps; fault?: { gateway: boolean; message?: string } };
 
 type Listener = (s: LiveSample) => void;
 
@@ -82,7 +82,16 @@ class MeasurementService {
       }
 
       const durationSec = Math.floor((Date.now() - this.startTs) / 1000);
-      const sample: LiveSample = { timestamp: dayjs().toISOString(), durationSec, devices, gps };
+      let fault: LiveSample['fault'] = undefined;
+      if (!s.simulation) {
+        const mstat = modbusPoller.getStatus();
+        const noData = devices.length === 0;
+        const stale = mstat.lastOkAt ? (Date.now() - mstat.lastOkAt > 5000) : true;
+        if (noData && stale) {
+          fault = { gateway: true, message: mstat.lastError || 'No data from gateway' };
+        }
+      }
+      const sample: LiveSample = { timestamp: dayjs().toISOString(), durationSec, devices, gps, fault };
       this.emit(sample);
 
       this.timer = setTimeout(tick, 1000);

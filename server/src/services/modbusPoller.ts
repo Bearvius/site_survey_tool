@@ -10,6 +10,8 @@ export interface PolledDevice {
 export class ModbusPoller {
   private client = new ModbusRTU();
   private connected = false;
+  private lastError: string | null = null;
+  private lastOkAt: number | null = null;
 
   async connect() {
     const s = settingsService.get();
@@ -23,8 +25,12 @@ export class ModbusPoller {
     try {
       if (!this.connected) await this.connect();
       const base = s.modbusBaseRegister;
-      // 20 registers for 10 devices (PER, RSSI) each
-      const { data } = await this.client.readHoldingRegisters(base, 20);
+      // 20 registers for 10 devices (PER, RSSI) each with a safety timeout
+      const readPromise = this.client.readHoldingRegisters(base, 20);
+      const { data } = await Promise.race([
+        readPromise,
+        new Promise<never>((_, rej) => setTimeout(() => rej(new Error('Modbus read timeout')), 2000)),
+      ]);
       const res: PolledDevice[] = [];
 
       const toInt16 = (v: number) => (v & 0x8000 ? v - 0x10000 : v);
@@ -40,11 +46,19 @@ export class ModbusPoller {
           res.push({ id: i + 1, per, rssi });
         }
       }
+      // success
+      this.lastOkAt = Date.now();
+      this.lastError = null;
       return res;
-    } catch {
-      // If read fails, return empty to avoid crashing; upstream may switch to simulation
+    } catch (e: any) {
+      // If read fails, return empty and record error
+      this.lastError = e?.message || String(e) || 'Unknown Modbus error';
       return [];
     }
+  }
+
+  getStatus() {
+    return { lastError: this.lastError, lastOkAt: this.lastOkAt };
   }
 }
 
