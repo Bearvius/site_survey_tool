@@ -19,12 +19,19 @@ sudo mkdir -p /opt/site_survey_tool
 sudo chown -R sitesurvey:sitesurvey /opt/site_survey_tool
 ```
 
-Copy your repository onto the Pi (scp or git clone), then install and build:
+Copy your repository onto the Pi (scp or git clone), then install and build (no sudo for npm):
 
 ```bash
 cd /opt/site_survey_tool
-npm install
-npm run build
+# Deterministic installs per package
+npm ci --prefix shared
+npm ci --prefix server
+npm ci --prefix client
+
+# Build each package
+npm run build --prefix shared
+npm run build --prefix server
+npm run build --prefix client
 ```
 
 Configure `server/config/settings.json` (Modbus, GPS, thresholds, tags).
@@ -69,13 +76,17 @@ Then access the app at `http://<pi-ip>/`.
 
 ## 5) Updates
 
-When you update the app:
+When you update the app (no sudo for npm):
 
 ```bash
 cd /opt/site_survey_tool
-git pull
-npm install
-npm run build
+git pull --ff-only
+
+# Install & build per package
+npm ci --prefix shared && npm run build --prefix shared
+npm ci --prefix server && npm run build --prefix server
+npm ci --prefix client && npm run build --prefix client
+
 sudo systemctl restart site-survey.service
 ```
 
@@ -107,6 +118,17 @@ You can override the app directory by passing it as the first argument, and the 
 ```bash
 SERVICE_NAME=site-survey.service site-survey-update /opt/site_survey_tool
 ```
+
+Troubleshooting the update script:
+
+- If you see `/usr/bin/env: ‘bash\r’: No such file or directory` or `command not found`, convert Windows line endings and/or add execute permissions:
+
+	```bash
+	cd /opt/site_survey_tool
+	sed -i 's/\r$//' deploy/update.sh
+	chmod +x deploy/update.sh
+	bash deploy/update.sh
+	```
 
 What it does:
 - `git pull` (falls back to `git fetch` + `reset --hard origin/main` if needed)

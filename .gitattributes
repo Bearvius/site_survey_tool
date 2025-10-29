@@ -1,0 +1,4 @@
+* text=auto
+# Ensure shell scripts use LF on checkout (avoid bash\r issues on Linux)
+*.sh text eol=lf
+deploy/*.sh text eol=lf
