@@ -138,6 +138,39 @@ export default function MeasurementList() {
                     </div>
                   </div>
                 )}
+                {details.perSubDevice && (
+                  <div style={{ marginTop: 12 }}>
+                    <h4>Per-device averages per sub-location</h4>
+                    <div className="table-container">
+                      <table className="table">
+                        <thead>
+                          <tr>
+                            <th>Index</th>
+                            <th>Sub-location</th>
+                            <th>Device</th>
+                            <th>Tag</th>
+                            <th>Avg RSSI</th>
+                            <th>Avg PER</th>
+                            <th>Samples</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {details.perSubDevice.map((row: any) => (
+                            <tr key={`${row.subIndex}-${row.deviceId}`}>
+                              <td>{row.subIndex}</td>
+                              <td>{row.subLocation || ''}</td>
+                              <td>D{row.deviceId}</td>
+                              <td>{row.tag || ''}</td>
+                              <td>{row.avgRssi} dBm</td>
+                              <td>{row.avgPer}%</td>
+                              <td>{row.samples}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
               </>
             ) : (
               <div>Loading…</div>

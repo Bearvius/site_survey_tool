@@ -133,9 +133,9 @@ router.get('/measurements/:file/details', (req, res) => {
   const full = path.resolve(getMeasurementsDir(), file);
   if (!fs.existsSync(full)) return res.status(404).send('Not found');
   try {
-    const rows = parseCsv(full);
-    const stats = computeStats(rows);
-    const series = buildSeries(rows);
+  const rows = parseCsv(full);
+  const stats = computeStats(rows);
+  const series = buildSeries(rows);
     // For continous files, compute sub-location markers and averages
     const isCont = file.includes('_continous.csv');
     if (isCont) {
@@ -165,7 +165,27 @@ router.get('/measurements/:file/details', (req, res) => {
         avgPer: Math.round(v.perSum / Math.max(1, v.n)),
         samples: v.n
       }));
-      return res.json({ stats, series, markers, perSub });
+
+      // per-device averages per subIndex
+      const perSubDeviceMap = new Map<string, { rssiSum: number; perSum: number; n: number; subLocation?: string; deviceId: number; tag?: string; subIndex: number }>();
+      for (const r of rows) {
+        const idx = (r as any).subIndex as number | undefined;
+        if (typeof idx !== 'number') continue;
+        const key = `${idx}:${r.deviceId}`;
+        const cur = perSubDeviceMap.get(key) ?? { rssiSum: 0, perSum: 0, n: 0, subLocation: (r as any).subLocation, deviceId: r.deviceId, tag: r.tag, subIndex: idx };
+        cur.rssiSum += r.rssi; cur.perSum += r.per; cur.n += 1; cur.tag = cur.tag ?? r.tag; cur.subLocation = cur.subLocation ?? (r as any).subLocation;
+        perSubDeviceMap.set(key, cur);
+      }
+      const perSubDevice = Array.from(perSubDeviceMap.values()).sort((a, b) => (a.subIndex - b.subIndex) || (a.deviceId - b.deviceId)).map(v => ({
+        subIndex: v.subIndex,
+        subLocation: v.subLocation,
+        deviceId: v.deviceId,
+        tag: v.tag,
+        avgRssi: Math.round(v.rssiSum / Math.max(1, v.n)),
+        avgPer: Math.round(v.perSum / Math.max(1, v.n)),
+        samples: v.n
+      }));
+      return res.json({ stats, series, markers, perSub, perSubDevice });
     }
     res.json({ stats, series });
   } catch (e) {

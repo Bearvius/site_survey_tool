@@ -29,6 +29,8 @@ export default function NewMeasurement() {
   const wsRef = useRef<WebSocket | null>(null);
   const canControl = location.trim().length > 0;
   const [subLocText, setSubLocText] = useState('');
+  const prevSubIndexRef = useRef<number | undefined>(undefined);
+  const markersRef = useRef<number[]>([]);
 
   useEffect(() => {
     // start measurement on mount
@@ -55,6 +57,17 @@ export default function NewMeasurement() {
   useEffect(() => {
     if (!live) return;
     const now = Date.now();
+    // Detect sub-location changes for continous mode and add markers
+    if (mode === 'continous') {
+      const prev = prevSubIndexRef.current;
+      if (typeof live.subIndex === 'number' && live.subIndex !== prev) {
+        // push a marker at current time to align with our local point timestamps
+        markersRef.current.push(now);
+        prevSubIndexRef.current = live.subIndex;
+        // Sync sub-location text from server when index changes
+        if (typeof live.subLocation === 'string') setSubLocText(live.subLocation);
+      }
+    }
     for (const d of live.devices) {
       const entry = bufferRef.current.get(d.id) ?? { id: d.id, tag: d.tag, points: [] };
       entry.tag = d.tag;
@@ -121,7 +134,7 @@ export default function NewMeasurement() {
         <div className="card" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <div style={{ fontWeight: 600 }}>Sub-location</div>
           <input value={subLocText} onChange={(e)=>setSubLocText(e.target.value)} placeholder="e.g. Aisle 3, Bay 2" style={{ flex: 1, minWidth: 200 }} />
-          <button className="btn" onClick={() => { api.post('/measurements/sub-location', { subLocation: subLocText }).catch(()=>{}); setSubLocText(''); }}>Update</button>
+          <button className="btn" onClick={() => { api.post('/measurements/sub-location', { subLocation: subLocText }).catch(()=>{}); }}>Update</button>
           <div style={{ marginLeft: 'auto', color: '#555' }}>Index: {live?.subIndex ?? 0}</div>
         </div>
       )}
@@ -134,7 +147,7 @@ export default function NewMeasurement() {
         </div>
       )}
       <div className="card">
-        <ChartLive series={series} />
+        <ChartLive series={series} markers={mode === 'continous' ? markersRef.current : undefined} />
       </div>
       {live?.gps?.source === 'mobile' && (
         <div style={{ padding: 10, border: '1px dashed #bbb', borderRadius: 6 }}>
