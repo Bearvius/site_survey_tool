@@ -54,14 +54,14 @@ git pull --ff-only || {
 }
 
 echo "[update] Installing dependencies per package (shared/server/client)..."
-# Prefer npm ci; on older npm, --prefix must come before the subcommand and may not be supported for 'ci'.
-# Fallback to 'npm install' if 'ci' fails or is unsupported.
+# If a package-lock.json exists, use 'npm ci'; otherwise use 'npm install' to generate it.
 for pkg in shared server client; do
   echo "[update] Installing deps in $pkg..."
-  npm --prefix "$pkg" ci \
-    || (cd "$pkg" && npm ci) \
-    || npm --prefix "$pkg" install \
-    || (cd "$pkg" && npm install)
+  if [ -f "$pkg/package-lock.json" ] || [ -f "$pkg/npm-shrinkwrap.json" ]; then
+    npm --prefix "$pkg" ci || (cd "$pkg" && npm ci)
+  else
+    npm --prefix "$pkg" install || (cd "$pkg" && npm install)
+  fi
 done
 
 echo "[update] Building packages..."
