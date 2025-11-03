@@ -9,7 +9,17 @@ import { getMeasurementsDir } from '../utils/paths';
 
 type LiveDevice = { id: number; tag?: string; rssi: number; per: number };
 type LiveGps = { lat?: number; lon?: number; fix: boolean; source: 'external' | 'mobile' | 'off' };
-type LiveSample = { timestamp: string; durationSec: number; devices: LiveDevice[]; gps?: LiveGps; fault?: { gateway: boolean; message?: string } };
+type MeasurementMode = 'spot' | 'continous';
+type LiveSample = {
+  timestamp: string;
+  durationSec: number;
+  devices: LiveDevice[];
+  gps?: LiveGps;
+  fault?: { gateway: boolean; message?: string };
+  mode: MeasurementMode;
+  subIndex?: number;
+  subLocation?: string;
+};
 
 type Listener = (s: LiveSample) => void;
 
@@ -17,9 +27,12 @@ class MeasurementService {
   private running = false;
   private paused = false;
   private location = '';
+  private mode: MeasurementMode = 'spot';
   private startTs: number = 0;
   private timer: NodeJS.Timeout | null = null;
-  private rows: Array<{ ts: number; deviceId: number; tag?: string; rssi: number; per: number; lat?: number; lon?: number }>= [];
+  private rows: Array<{ ts: number; deviceId: number; tag?: string; rssi: number; per: number; lat?: number; lon?: number; subIndex?: number; subLocation?: string }>= [];
+  private subIndex: number = 0;
+  private subLocation: string = '';
   private listeners: Set<Listener> = new Set();
 
   subscribe(cb: Listener) {
@@ -31,13 +44,16 @@ class MeasurementService {
     for (const l of this.listeners) l(sample);
   }
 
-  start(location: string) {
+  start(location: string, mode: MeasurementMode = 'spot') {
     if (this.running) return false;
     this.running = true;
     this.paused = false;
     this.location = location || 'Unnamed';
+    this.mode = mode || 'spot';
     this.startTs = Date.now();
     this.rows = [];
+    this.subIndex = 0;
+    this.subLocation = '';
 
     const s = settingsService.get();
     if (s.gpsMode === 'external') gpsService.start();
@@ -50,6 +66,13 @@ class MeasurementService {
   setLocation(name: string) {
     if (!this.running) return;
     this.location = name || this.location;
+  }
+
+  updateSubLocation(text: string) {
+    if (!this.running) return;
+    // Increment index and set current label
+    this.subIndex = (this.subIndex || 0) + 1;
+    this.subLocation = (text || '').trim();
   }
 
   isRunning() { return this.running; }
@@ -77,7 +100,7 @@ class MeasurementService {
 
         const ts = Date.now();
         for (const d of devices) {
-          this.rows.push({ ts, deviceId: d.id, tag: d.tag, rssi: d.rssi, per: d.per, lat: gps?.lat, lon: gps?.lon });
+          this.rows.push({ ts, deviceId: d.id, tag: d.tag, rssi: d.rssi, per: d.per, lat: gps?.lat, lon: gps?.lon, subIndex: this.mode === 'continous' ? this.subIndex : undefined, subLocation: this.mode === 'continous' ? this.subLocation : undefined });
         }
       }
 
@@ -91,7 +114,7 @@ class MeasurementService {
           fault = { gateway: true, message: mstat.lastError || 'No data from gateway' };
         }
       }
-      const sample: LiveSample = { timestamp: dayjs().toISOString(), durationSec, devices, gps, fault };
+  const sample: LiveSample = { timestamp: dayjs().toISOString(), durationSec, devices, gps, fault, mode: this.mode, subIndex: this.mode === 'continous' ? this.subIndex : undefined, subLocation: this.mode === 'continous' ? this.subLocation : undefined };
       this.emit(sample);
 
       this.timer = setTimeout(tick, 1000);
@@ -119,10 +142,16 @@ class MeasurementService {
     const dir = getMeasurementsDir({ ensure: true });
     const tsStr = dayjs(this.startTs).format('YYYY-MM-DD_HH-mm-ss');
     const safeName = this.location.replace(/[^a-zA-Z0-9-_]/g, '_');
-    const filename = `${safeName}_${tsStr}.csv`;
+    const suffix = this.mode === 'continous' ? '_continous' : '';
+    const filename = `${safeName}_${tsStr}${suffix}.csv`;
     const full = path.join(dir, filename);
-    const header = 'timestamp,deviceId,tag,rssi,per,lat,lon\n';
-    const lines = this.rows.map(r => `${dayjs(r.ts).toISOString()},${r.deviceId},${r.tag ?? ''},${r.rssi},${r.per},${r.lat ?? ''},${r.lon ?? ''}`);
+    const header = this.mode === 'continous'
+      ? 'timestamp,deviceId,tag,rssi,per,lat,lon,subIndex,subLocation\n'
+      : 'timestamp,deviceId,tag,rssi,per,lat,lon\n';
+    const lines = this.rows.map(r => this.mode === 'continous'
+      ? `${dayjs(r.ts).toISOString()},${r.deviceId},${r.tag ?? ''},${r.rssi},${r.per},${r.lat ?? ''},${r.lon ?? ''},${r.subIndex ?? ''},${(r.subLocation ?? '').replace(/,/g,';')}`
+      : `${dayjs(r.ts).toISOString()},${r.deviceId},${r.tag ?? ''},${r.rssi},${r.per},${r.lat ?? ''},${r.lon ?? ''}`
+    );
     fs.writeFileSync(full, header + lines.join('\n'), 'utf-8');
 
     return filename;

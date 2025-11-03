@@ -1,5 +1,5 @@
 import React from 'react';
-import { LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
 import dayjs from 'dayjs';
 
 type DeviceSeries = {
@@ -8,7 +8,7 @@ type DeviceSeries = {
   points: { t: number; rssi: number; per: number }[];
 };
 
-export default function ChartLive({ series }: { series: DeviceSeries[] }) {
+export default function ChartLive({ series, markers }: { series: DeviceSeries[]; markers?: number[] }) {
   const dataLen = Math.max(0, ...series.map((s) => s.points.length));
   const data = Array.from({ length: dataLen }).map((_, idx) => {
     const row: any = { idx };
@@ -59,6 +59,9 @@ export default function ChartLive({ series }: { series: DeviceSeries[] }) {
             isAnimationActive={false}
             animationDuration={0}
           />
+        ))}
+        {markers && markers.map((ts, i) => (
+          <ReferenceLine key={`m-${i}`} x={dayjs(ts).format('HH:mm:ss')} stroke="#b8860b" strokeDasharray="4 4" label={{ value: `S${i+1}`, position: 'top', fill: '#b8860b', fontSize: 10 }} />
         ))}
       </LineChart>
     </ResponsiveContainer>

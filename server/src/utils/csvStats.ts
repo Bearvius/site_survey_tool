@@ -1,24 +1,30 @@
 import fs from 'fs';
 import dayjs from 'dayjs';
 
-export type CsvRow = { ts: number; deviceId: number; tag?: string; rssi: number; per: number; lat?: number; lon?: number };
+export type CsvRow = { ts: number; deviceId: number; tag?: string; rssi: number; per: number; lat?: number; lon?: number; subIndex?: number; subLocation?: string };
 
 export function parseCsv(filePath: string): CsvRow[] {
   const text = fs.readFileSync(filePath, 'utf-8');
   const lines = text.split(/\r?\n/);
   const rows: CsvRow[] = [];
+  if (lines.length <= 1) return rows;
+  const header = lines[0].split(',');
+  const hasSub = header.includes('subIndex') && header.includes('subLocation');
   for (let i = 1; i < lines.length; i++) { // skip header
     const line = lines[i];
     if (!line) continue;
-    const [tsStr, deviceIdStr, tag, rssiStr, perStr, latStr, lonStr] = line.split(',');
+    const cols = line.split(',');
+    const [tsStr, deviceIdStr, tag, rssiStr, perStr, latStr, lonStr, subIndexStr, subLocationStr] = cols as any;
     const ts = dayjs(tsStr).valueOf();
     const deviceId = Number(deviceIdStr);
     const rssi = Number(rssiStr);
     const per = Number(perStr);
     const lat = latStr ? Number(latStr) : undefined;
     const lon = lonStr ? Number(lonStr) : undefined;
+    const subIndex = hasSub && subIndexStr ? Number(subIndexStr) : undefined;
+    const subLocation = hasSub ? (subLocationStr || undefined) : undefined;
     if (Number.isFinite(ts) && deviceId) {
-      rows.push({ ts, deviceId, tag: tag || undefined, rssi, per, lat, lon });
+      rows.push({ ts, deviceId, tag: tag || undefined, rssi, per, lat, lon, subIndex, subLocation });
     }
   }
   return rows;

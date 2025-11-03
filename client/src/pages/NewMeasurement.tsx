@@ -3,7 +3,7 @@ import { api } from '../lib';
 import ChartLive from '../components/ChartLive';
 import GpsStatus from '../components/GpsStatus';
 import ConfirmDialog from '../components/ConfirmDialog';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 type LiveMsg = {
   timestamp: string;
@@ -11,10 +11,15 @@ type LiveMsg = {
   devices: { id: number; tag?: string; rssi: number; per: number }[];
   gps?: { source: 'external' | 'mobile' | 'off'; fix: boolean; lat?: number; lon?: number };
   fault?: { gateway: boolean; message?: string };
+  mode: 'spot' | 'continous';
+  subIndex?: number;
+  subLocation?: string;
 };
 
 export default function NewMeasurement() {
   const nav = useNavigate();
+  const [search] = useSearchParams();
+  const mode = (search.get('mode') as 'spot' | 'continous') || 'spot';
   const [location, setLocation] = useState('');
   const [live, setLive] = useState<LiveMsg | null>(null);
   const [thresholds, setThresholds] = useState<{ rssiGood: number; rssiWarn: number; perGood: number; perWarn: number }>({ rssiGood: -70, rssiWarn: -85, perGood: 2, perWarn: 5 });
@@ -23,10 +28,11 @@ export default function NewMeasurement() {
   const [confirm, setConfirm] = useState<null | { action: 'stop' | 'cancel'; text: string }>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const canControl = location.trim().length > 0;
+  const [subLocText, setSubLocText] = useState('');
 
   useEffect(() => {
     // start measurement on mount
-    api.post('/measurements/start', { location: location || 'Unnamed' }).catch(() => {});
+    api.post('/measurements/start', { location: location || 'Unnamed', type: mode }).catch(() => {});
     // load thresholds from settings
     api.get('/settings').then((r) => {
       const t = r.data?.thresholds;
@@ -101,10 +107,24 @@ export default function NewMeasurement() {
 
   return (
     <div style={{ display: 'grid', gap: 12 }}>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'baseline', flexWrap: 'wrap' }}>
+        <div><b>Mode:</b> {mode === 'continous' ? 'Continous Measurement' : 'Spot Measurement'}</div>
+        {mode === 'continous' && (
+          <div style={{ color: '#6b7280' }}>(Survey by moving; mark sub-locations as you go)</div>
+        )}
+      </div>
       <label>
         Location
         <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Enter location" style={{ display: 'block', width: '100%', padding: 8, marginTop: 4 }} />
       </label>
+      {mode === 'continous' && (
+        <div className="card" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <div style={{ fontWeight: 600 }}>Sub-location</div>
+          <input value={subLocText} onChange={(e)=>setSubLocText(e.target.value)} placeholder="e.g. Aisle 3, Bay 2" style={{ flex: 1, minWidth: 200 }} />
+          <button className="btn" onClick={() => { api.post('/measurements/sub-location', { subLocation: subLocText }).catch(()=>{}); setSubLocText(''); }}>Update</button>
+          <div style={{ marginLeft: 'auto', color: '#555' }}>Index: {live?.subIndex ?? 0}</div>
+        </div>
+      )}
       <div>Timestamp: {new Date().toLocaleString()}</div>
       <div>Duration: {durationText}</div>
       {live?.fault?.gateway && (

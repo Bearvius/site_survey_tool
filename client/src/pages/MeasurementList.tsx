@@ -4,7 +4,7 @@ import ChartLive from '../components/ChartLive';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { useNavigate } from 'react-router-dom';
 
-type Item = { number: number; id: string; name: string; timestamp: string; filename: string; durationSec: number; avgRssi: number; avgPer: number };
+type Item = { number: number; id: string; name: string; timestamp: string; filename: string; durationSec: number; avgRssi: number; avgPer: number; type?: 'spot' | 'continous' };
 
 export default function MeasurementList() {
   const nav = useNavigate();
@@ -46,6 +46,7 @@ export default function MeasurementList() {
               <th>Duration</th>
               <th>Avg RSSI</th>
               <th>Avg PER</th>
+              <th>Type</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -58,6 +59,7 @@ export default function MeasurementList() {
                 <td>{fmtDuration(i.durationSec)}</td>
                 <td>{i.avgRssi} dBm</td>
                 <td>{i.avgPer}%</td>
+                <td>{i.type ?? (i.filename.includes('_continous') ? 'continous' : 'spot')}</td>
                 <td>
                   <button className="btn" onClick={() => { setView(i); setDetails(null); api.get(`/measurements/${i.filename}/details`).then((r) => setDetails(r.data)); }}>View</button>{' '}
                   <button className="btn btn-danger" onClick={() => setConfirm(i)}>Delete</button>
@@ -75,7 +77,7 @@ export default function MeasurementList() {
       {view && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'grid', placeItems: 'center' }}>
           <div style={{ background: 'white', padding: 16, borderRadius: 8, maxWidth: 800, width: '90%' }}>
-            <h3>{view.name}</h3>
+            <h3>{view.name} <small style={{ color: '#6b7280', fontWeight: 400 }}>({view.type ?? (view.filename.includes('_continous') ? 'continous' : 'spot')})</small></h3>
             <p>File: {view.filename}</p>
             {details ? (
               <>
@@ -105,8 +107,37 @@ export default function MeasurementList() {
                   </div>
                 </div>
                 <div style={{ marginTop: 8 }}>
-                  <ChartLive series={details.series.map((s: any) => ({ id: s.deviceId, tag: s.tag, points: s.points }))} />
+                  <ChartLive series={details.series.map((s: any) => ({ id: s.deviceId, tag: s.tag, points: s.points }))} markers={details.markers?.map((m: any) => m.ts)} />
                 </div>
+                {details.perSub && (
+                  <div style={{ marginTop: 12 }}>
+                    <h4>Average per sub-location</h4>
+                    <div className="table-container">
+                      <table className="table">
+                        <thead>
+                          <tr>
+                            <th>Index</th>
+                            <th>Sub-location</th>
+                            <th>Avg RSSI</th>
+                            <th>Avg PER</th>
+                            <th>Samples</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {details.perSub.map((row: any) => (
+                            <tr key={row.subIndex}>
+                              <td>{row.subIndex}</td>
+                              <td>{row.subLocation || ''}</td>
+                              <td>{row.avgRssi} dBm</td>
+                              <td>{row.avgPer}%</td>
+                              <td>{row.samples}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
               </>
             ) : (
               <div>Loading…</div>
