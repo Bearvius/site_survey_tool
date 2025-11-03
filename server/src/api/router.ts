@@ -23,10 +23,14 @@ router.put('/settings', (req, res) => {
 // Measurement control
 router.post('/measurements/start', (req, res) => {
   try {
-    const { location, type } = req.body as { location: string; type?: 'spot' | 'continous' };
-    if (!location) return res.status(400).json({ error: 'Location required' });
-    const ok = measurementService.start(location, (type ?? 'spot'));
-    if (!ok) return res.status(400).json({ error: 'Location required or already running' });
+    const { location, type } = req.body as { location?: string; type?: 'spot' | 'continous' };
+    const loc = (location && location.trim().length > 0) ? location : 'Unnamed';
+    const ok = measurementService.start(loc, (type ?? 'spot'));
+    if (!ok) {
+      // If already running, be idempotent and return 200 so clients don't break on 400
+      if (location && location.trim()) measurementService.setLocation(location);
+      return res.json({ status: 'already-running' });
+    }
     res.json({ status: 'started' });
   } catch (e) {
     res.status(500).json({ error: String(e) });

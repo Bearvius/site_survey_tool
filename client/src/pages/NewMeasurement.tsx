@@ -32,8 +32,11 @@ export default function NewMeasurement() {
   const prevSubIndexRef = useRef<number | undefined>(undefined);
   const markersRef = useRef<number[]>([]);
 
+  const startedRef = useRef(false);
   useEffect(() => {
     // start measurement on mount
+    if (startedRef.current) return;
+    startedRef.current = true;
     api.post('/measurements/start', { location: location || 'Unnamed', type: mode }).catch(() => {});
     // load thresholds from settings
     api.get('/settings').then((r) => {
@@ -41,7 +44,7 @@ export default function NewMeasurement() {
       if (t) setThresholds(t);
     }).catch(() => {});
     const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
-    const ws = new WebSocket(`${proto}://${window.location.host}/ws/live`);
+  const ws = new WebSocket(`${proto}://${window.location.host}/ws/live`);
     ws.onmessage = (ev) => {
       try {
         const msg = JSON.parse(ev.data);
