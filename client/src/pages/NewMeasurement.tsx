@@ -42,7 +42,12 @@ export default function NewMeasurement() {
     }).catch(() => {});
     const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
     const ws = new WebSocket(`${proto}://${window.location.host}/ws/live`);
-    ws.onmessage = (ev) => setLive(JSON.parse(ev.data));
+    ws.onmessage = (ev) => {
+      try {
+        const msg = JSON.parse(ev.data);
+        setLive(msg);
+      } catch {}
+    };
     wsRef.current = ws;
     return () => {
       ws.close();

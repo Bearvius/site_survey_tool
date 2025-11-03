@@ -70,9 +70,10 @@ export default function MeasurementList() {
         </table>
         </div>
       )}
-      <div style={{ marginTop: 12 }}>
-        <a href="#/new"><button className="btn btn-primary" onClick={() => (window.location.href = '/new')}>New Measurement</button></a>
-        <button className="btn" style={{ marginLeft: 8 }} onClick={() => nav('/')}>Back</button>
+      <div style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <button className="btn btn-primary" onClick={() => nav('/new?mode=spot')}>New Spot Measurement</button>
+        <button className="btn" onClick={() => nav('/new?mode=continous')}>New Continous Measurement</button>
+        <button className="btn" onClick={() => nav('/')}>Back</button>
       </div>
       {view && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'grid', placeItems: 'center' }}>
