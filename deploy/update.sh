@@ -28,15 +28,22 @@ git pull --ff-only || {
 }
 
 echo "[update] Installing dependencies per package (shared/server/client)..."
-# Use --prefix before subcommand (older npm requires this); fall back to subshell cd
-npm --prefix shared ci || (cd shared && npm ci)
-npm --prefix server ci || (cd server && npm ci)
-npm --prefix client ci || (cd client && npm ci)
+# Prefer npm ci; on older npm, --prefix must come before the subcommand and may not be supported for 'ci'.
+# Fallback to 'npm install' if 'ci' fails or is unsupported.
+for pkg in shared server client; do
+  echo "[update] Installing deps in $pkg..."
+  npm --prefix "$pkg" ci \
+    || (cd "$pkg" && npm ci) \
+    || npm --prefix "$pkg" install \
+    || (cd "$pkg" && npm install)
+done
 
 echo "[update] Building packages..."
-npm --prefix shared run build || (cd shared && npm run build)
-npm --prefix server run build || (cd server && npm run build)
-npm --prefix client run build || (cd client && npm run build)
+for pkg in shared server client; do
+  echo "[update] Building $pkg..."
+  npm --prefix "$pkg" run build \
+    || (cd "$pkg" && npm run build)
+done
 
 restart_cmd=(systemctl restart "$SERVICE_NAME")
 status_cmd=(systemctl status "$SERVICE_NAME" --no-pager --full)
