@@ -17,6 +17,19 @@ fi
 
 cd "$APP_DIR"
 
+echo "[update] Ensuring Git trusts this directory (safe.directory)..."
+if command -v git >/dev/null 2>&1; then
+  git config --global --add safe.directory "$APP_DIR" || true
+fi
+
+# Warn if directory is not owned by current user (can cause Git permission/safety issues)
+CUR_USER=$(id -un || echo "")
+DIR_OWNER=$(stat -c '%U' "$APP_DIR" 2>/dev/null || echo "")
+if [ -n "$CUR_USER" ] && [ -n "$DIR_OWNER" ] && [ "$CUR_USER" != "$DIR_OWNER" ]; then
+  echo "[update] WARNING: $APP_DIR is owned by '$DIR_OWNER', current user is '$CUR_USER'."
+  echo "[update] You may want to run: sudo chown -R $CUR_USER:$CUR_USER \"$APP_DIR\""
+fi
+
 echo "[update] Git status before update:"
 git status --short || true
 
