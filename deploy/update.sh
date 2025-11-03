@@ -30,6 +30,19 @@ if [ -n "$CUR_USER" ] && [ -n "$DIR_OWNER" ] && [ "$CUR_USER" != "$DIR_OWNER" ];
   echo "[update] You may want to run: sudo chown -R $CUR_USER:$CUR_USER \"$APP_DIR\""
 fi
 
+# If the Git metadata is owned by a different user, re-exec this script as that user to avoid permission errors.
+REPO_OWNER=$(stat -c '%U' "$APP_DIR/.git" 2>/dev/null || echo "")
+if [ -n "$REPO_OWNER" ] && [ -n "$CUR_USER" ] && [ "$REPO_OWNER" != "$CUR_USER" ]; then
+  if [ -z "${UPDATE_SH_REEXEC:-}" ] && command -v sudo >/dev/null 2>&1; then
+    echo "[update] .git is owned by '$REPO_OWNER'. Re-executing update as that user..."
+    exec sudo -u "$REPO_OWNER" -H env UPDATE_SH_REEXEC=1 bash -lc "'${APP_DIR}/deploy/update.sh' '${APP_DIR}'"
+  else
+    echo "[update] ERROR: .git is owned by '$REPO_OWNER' and current user is '$CUR_USER'." >&2
+    echo "[update] Please run: sudo -u $REPO_OWNER -H ${APP_DIR}/deploy/update.sh ${APP_DIR}" >&2
+    exit 1
+  fi
+fi
+
 echo "[update] Git status before update:"
 git status --short || true
 
