@@ -25,6 +25,12 @@ export default function ChartLive({ series, markers }: { series: DeviceSeries[];
     return row;
   });
 
+  // Build a set of available x-axis labels to safely plot marker lines only when they exist
+  const timeSet = new Set<string>(data.map(d => d.time).filter(Boolean));
+  const markerLabels: string[] = (markers || [])
+    .map(ts => dayjs(ts).format('HH:mm:ss'))
+    .filter(label => timeSet.has(label));
+
   return (
     <ResponsiveContainer width="100%" height={320}>
       <LineChart data={data} margin={{ top: 10, right: 20, bottom: 10, left: 0 }}>
@@ -60,8 +66,8 @@ export default function ChartLive({ series, markers }: { series: DeviceSeries[];
             animationDuration={0}
           />
         ))}
-        {markers && markers.map((ts, i) => (
-          <ReferenceLine key={`m-${i}`} x={dayjs(ts).format('HH:mm:ss')} stroke="#b8860b" strokeDasharray="4 4" label={{ value: `S${i+1}`, position: 'top', fill: '#b8860b', fontSize: 10 }} />
+        {markerLabels.map((label, i) => (
+          <ReferenceLine key={`m-${i}`} x={label} stroke="#b8860b" strokeDasharray="4 4" label={{ value: `S${i+1}`, position: 'top', fill: '#b8860b', fontSize: 10 }} />
         ))}
       </LineChart>
     </ResponsiveContainer>
