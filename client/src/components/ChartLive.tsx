@@ -21,21 +21,21 @@ export default function ChartLive({ series, markers }: { series: DeviceSeries[];
         if (t === undefined) t = p.t;
       }
     }
-    row.time = t ? dayjs(t).format('HH:mm:ss') : '';
+    row.ts = t ?? null; // numeric ts for x-axis
     return row;
   });
 
-  // Build a set of available x-axis labels to safely plot marker lines only when they exist
-  const timeSet = new Set<string>(data.map(d => d.time).filter(Boolean));
-  const markerLabels: string[] = (markers || [])
-    .map(ts => dayjs(ts).format('HH:mm:ss'))
-    .filter(label => timeSet.has(label));
+  const tsValues: number[] = data.map(d => d.ts).filter((v: any) => typeof v === 'number');
+  const minTs = tsValues.length ? Math.min(...tsValues) : undefined;
+  const maxTs = tsValues.length ? Math.max(...tsValues) : undefined;
+  const markerTs: number[] = (markers || [])
+    .filter(ts => typeof ts === 'number' && (minTs === undefined || ts >= minTs) && (maxTs === undefined || ts <= maxTs));
 
   return (
     <ResponsiveContainer width="100%" height={320}>
       <LineChart data={data} margin={{ top: 10, right: 20, bottom: 10, left: 0 }}>
         <CartesianGrid stroke="#eee" />
-  <XAxis dataKey="time" />
+        <XAxis dataKey="ts" type="number" domain={[minTs ?? 'dataMin', maxTs ?? 'dataMax']} tickFormatter={(v) => (typeof v === 'number' ? dayjs(v).format('HH:mm:ss') : '')} />
         <YAxis yAxisId="rssi" domain={[-110, 0]} tickFormatter={(v) => `${v} dBm`} />
         <YAxis yAxisId="per" orientation="right" domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
         <Tooltip />
@@ -66,8 +66,8 @@ export default function ChartLive({ series, markers }: { series: DeviceSeries[];
             animationDuration={0}
           />
         ))}
-        {markerLabels.map((label, i) => (
-          <ReferenceLine key={`m-${i}`} x={label} stroke="#b8860b" strokeDasharray="4 4" label={{ value: `S${i+1}`, position: 'top', fill: '#b8860b', fontSize: 10 }} />
+        {markerTs.map((ts, i) => (
+          <ReferenceLine key={`m-${i}`} x={ts} stroke="#b8860b" strokeDasharray="4 4" label={{ value: `S${i + 1}`, position: 'top', fill: '#b8860b', fontSize: 10 }} />
         ))}
       </LineChart>
     </ResponsiveContainer>
