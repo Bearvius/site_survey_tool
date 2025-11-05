@@ -33,14 +33,30 @@ export default function ChartLive({ series, markers }: { series: DeviceSeries[];
   const tsValues: number[] = data.map(d => d.ts).filter((v: any) => typeof v === 'number');
   const minTs = tsValues.length ? Math.min(...tsValues) : undefined;
   const maxTs = tsValues.length ? Math.max(...tsValues) : undefined;
+  const hasData = typeof minTs === 'number' && typeof maxTs === 'number';
+
+  // If there's no data yet, render a lightweight placeholder to avoid Recharts invariant errors
+  if (!hasData) {
+    return (
+      <div style={{ height: 320, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280' }}>
+        Waiting for data…
+      </div>
+    );
+  }
+
+  // Avoid zero-width domains which can trigger invariant failures on some browsers
+  const pad = Math.max(1, Math.floor((maxTs - minTs) * 0.05));
+  const xMin = minTs === maxTs ? minTs - 1000 : (minTs - pad);
+  const xMax = minTs === maxTs ? maxTs + 1000 : (maxTs + pad);
+
   const markerTs: number[] = (markers || [])
-    .filter(ts => typeof ts === 'number' && (minTs === undefined || ts >= minTs) && (maxTs === undefined || ts <= maxTs));
+    .filter(ts => typeof ts === 'number' && ts >= xMin && ts <= xMax);
 
   return (
     <ResponsiveContainer width="100%" height={320}>
       <LineChart data={data} margin={{ top: 10, right: 20, bottom: 10, left: 0 }}>
         <CartesianGrid stroke="#eee" />
-        <XAxis dataKey="ts" type="number" domain={[minTs ?? 'dataMin', maxTs ?? 'dataMax']} allowDataOverflow tickFormatter={(v) => (typeof v === 'number' ? dayjs(v).format('HH:mm:ss') : '')} />
+        <XAxis dataKey="ts" type="number" domain={[xMin, xMax]} allowDataOverflow tickFormatter={(v) => (typeof v === 'number' ? dayjs(v).format('HH:mm:ss') : '')} />
         <YAxis yAxisId="rssi" domain={[-110, 0]} tickFormatter={(v) => `${v} dBm`} />
         <YAxis yAxisId="per" orientation="right" domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
         <Tooltip />

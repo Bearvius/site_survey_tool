@@ -1,7 +1,7 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../lib';
-import ChartLive from '../components/ChartLive';
+import SafeChartLive from '../components/SafeChartLive';
 import GpsStatus from '../components/GpsStatus';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -20,8 +20,12 @@ export default function NewMeasurement() {
     const [subLocText, setSubLocText] = useState('');
     const prevSubIndexRef = useRef(undefined);
     const markersRef = useRef([]);
+    const startedRef = useRef(false);
     useEffect(() => {
         // start measurement on mount
+        if (startedRef.current)
+            return;
+        startedRef.current = true;
         api.post('/measurements/start', { location: location || 'Unnamed', type: mode }).catch(() => { });
         // load thresholds from settings
         api.get('/settings').then((r) => {
@@ -31,7 +35,13 @@ export default function NewMeasurement() {
         }).catch(() => { });
         const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
         const ws = new WebSocket(`${proto}://${window.location.host}/ws/live`);
-        ws.onmessage = (ev) => setLive(JSON.parse(ev.data));
+        ws.onmessage = (ev) => {
+            try {
+                const msg = JSON.parse(ev.data);
+                setLive(msg);
+            }
+            catch { }
+        };
         wsRef.current = ws;
         return () => {
             ws.close();
@@ -108,7 +118,7 @@ export default function NewMeasurement() {
     }
     const durationText = live ? (live.durationSec < 60 ? `${live.durationSec}s` : `${Math.floor(live.durationSec / 60)}m`) : '0s';
     const mobileGpsUrl = `${window.location.protocol}//${window.location.host}/mobile-gps`;
-    return (_jsxs("div", { style: { display: 'grid', gap: 12 }, children: [_jsxs("div", { style: { display: 'flex', gap: 8, alignItems: 'baseline', flexWrap: 'wrap' }, children: [_jsxs("div", { children: [_jsx("b", { children: "Mode:" }), " ", mode === 'continous' ? 'Continous Measurement' : 'Spot Measurement'] }), mode === 'continous' && (_jsx("div", { style: { color: '#6b7280' }, children: "(Survey by moving; mark sub-locations as you go)" }))] }), _jsxs("label", { children: ["Location", _jsx("input", { value: location, onChange: (e) => setLocation(e.target.value), placeholder: "Enter location", style: { display: 'block', width: '100%', padding: 8, marginTop: 4 } })] }), mode === 'continous' && (_jsxs("div", { className: "card", style: { display: 'flex', gap: 8, alignItems: 'center' }, children: [_jsx("div", { style: { fontWeight: 600 }, children: "Sub-location" }), _jsx("input", { value: subLocText, onChange: (e) => setSubLocText(e.target.value), placeholder: "e.g. Aisle 3, Bay 2", style: { flex: 1, minWidth: 200 } }), _jsx("button", { className: "btn", onClick: () => { api.post('/measurements/sub-location', { subLocation: subLocText }).catch(() => { }); }, children: "Update" }), _jsxs("div", { style: { marginLeft: 'auto', color: '#555' }, children: ["Index: ", live?.subIndex ?? 0] })] })), _jsxs("div", { children: ["Timestamp: ", new Date().toLocaleString()] }), _jsxs("div", { children: ["Duration: ", durationText] }), live?.fault?.gateway && (_jsxs("div", { className: "card", style: { borderColor: '#b8860b', background: '#fff8e1' }, children: [_jsx("div", { style: { fontWeight: 700, color: '#b8860b' }, children: "Gateway communication fault" }), _jsx("div", { style: { color: '#6b7280' }, children: live.fault.message || 'No data received from wireless gateway.' })] })), _jsx("div", { className: "card", children: _jsx(ChartLive, { series: series, markers: mode === 'continous' ? markersRef.current : undefined }) }), live?.gps?.source === 'mobile' && (_jsxs("div", { style: { padding: 10, border: '1px dashed #bbb', borderRadius: 6 }, children: [_jsx("div", { style: { fontWeight: 600, marginBottom: 6 }, children: "Mobile GPS mode active" }), _jsx("div", { style: { marginBottom: 6 }, children: "If location isn\u2019t updating on this device, open this URL on your phone to send GPS to the server while the measurement runs:" }), _jsxs("div", { style: { display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }, children: [_jsx("a", { href: mobileGpsUrl, target: "_blank", rel: "noreferrer", children: mobileGpsUrl }), _jsx("button", { onClick: () => navigator.clipboard?.writeText(mobileGpsUrl), children: "Copy link" })] }), _jsx("div", { style: { marginTop: 6, color: '#555' }, children: "Tip: Many browsers require HTTPS for geolocation (except localhost)." })] })), _jsxs("div", { className: "card", children: [_jsx("h4", { style: { marginTop: 0 }, children: "Live device values" }), _jsx("div", { className: "tiles", children: (live?.devices ?? []).sort((a, b) => a.id - b.id).map((d) => {
+    return (_jsxs("div", { style: { display: 'grid', gap: 12 }, children: [_jsxs("div", { style: { display: 'flex', gap: 8, alignItems: 'baseline', flexWrap: 'wrap' }, children: [_jsxs("div", { children: [_jsx("b", { children: "Mode:" }), " ", mode === 'continous' ? 'Continous Measurement' : 'Spot Measurement'] }), mode === 'continous' && (_jsx("div", { style: { color: '#6b7280' }, children: "(Survey by moving; mark sub-locations as you go)" }))] }), _jsxs("label", { children: ["Location", _jsx("input", { value: location, onChange: (e) => setLocation(e.target.value), placeholder: "Enter location", style: { display: 'block', width: '100%', padding: 8, marginTop: 4 } })] }), mode === 'continous' && (_jsxs("div", { className: "card", style: { display: 'flex', gap: 8, alignItems: 'center' }, children: [_jsx("div", { style: { fontWeight: 600 }, children: "Sub-location" }), _jsx("input", { value: subLocText, onChange: (e) => setSubLocText(e.target.value), placeholder: "e.g. Aisle 3, Bay 2", style: { flex: 1, minWidth: 200 } }), _jsx("button", { className: "btn", onClick: () => { api.post('/measurements/sub-location', { subLocation: subLocText }).catch(() => { }); }, children: "Update" }), _jsxs("div", { style: { marginLeft: 'auto', color: '#555' }, children: ["Index: ", live?.subIndex ?? 0] })] })), _jsxs("div", { children: ["Timestamp: ", new Date().toLocaleString()] }), _jsxs("div", { children: ["Duration: ", durationText] }), live?.fault?.gateway && (_jsxs("div", { className: "card", style: { borderColor: '#b8860b', background: '#fff8e1' }, children: [_jsx("div", { style: { fontWeight: 700, color: '#b8860b' }, children: "Gateway communication fault" }), _jsx("div", { style: { color: '#6b7280' }, children: live.fault.message || 'No data received from wireless gateway.' })] })), _jsx("div", { className: "card", children: _jsx(SafeChartLive, { series: series, markers: mode === 'continous' ? markersRef.current : undefined }) }), live?.gps?.source === 'mobile' && (_jsxs("div", { style: { padding: 10, border: '1px dashed #bbb', borderRadius: 6 }, children: [_jsx("div", { style: { fontWeight: 600, marginBottom: 6 }, children: "Mobile GPS mode active" }), _jsx("div", { style: { marginBottom: 6 }, children: "If location isn\u2019t updating on this device, open this URL on your phone to send GPS to the server while the measurement runs:" }), _jsxs("div", { style: { display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }, children: [_jsx("a", { href: mobileGpsUrl, target: "_blank", rel: "noreferrer", children: mobileGpsUrl }), _jsx("button", { onClick: () => navigator.clipboard?.writeText(mobileGpsUrl), children: "Copy link" })] }), _jsx("div", { style: { marginTop: 6, color: '#555' }, children: "Tip: Many browsers require HTTPS for geolocation (except localhost)." })] })), _jsxs("div", { className: "card", children: [_jsx("h4", { style: { marginTop: 0 }, children: "Live device values" }), _jsx("div", { className: "tiles", children: (live?.devices ?? []).sort((a, b) => a.id - b.id).map((d) => {
                             const rssi = Math.round(d.rssi);
                             const per = Math.round(d.per);
                             const rssiColor = rssi >= thresholds.rssiGood ? '#1a7f37' : rssi >= thresholds.rssiWarn ? '#b8860b' : '#b22222';
