@@ -9,19 +9,24 @@ type DeviceSeries = {
 };
 
 export default function ChartLive({ series, markers }: { series: DeviceSeries[]; markers?: number[] }) {
-  const dataLen = Math.max(0, ...series.map((s) => s.points.length));
-  const data = Array.from({ length: dataLen }).map((_, idx) => {
-    const row: any = { idx };
-    let t: number | undefined;
-    for (const s of series) {
-      const p = s.points[idx];
-      if (p) {
-        row[`rssi${s.id}`] = p.rssi;
-        row[`per${s.id}`] = p.per;
-        if (t === undefined) t = p.t;
+  // Build rows based on the union of timestamps across all series to avoid index-based misalignment
+  const tsSet = new Set<number>();
+  for (const s of series) for (const p of s.points) if (Number.isFinite(p.t)) tsSet.add(p.t);
+  const tsList = Array.from(tsSet.values()).sort((a, b) => a - b);
+  const pointMaps = series.map((s) => {
+    const m = new Map<number, { rssi: number; per: number }>();
+    for (const p of s.points) m.set(p.t, { rssi: p.rssi, per: p.per });
+    return { id: s.id, map: m };
+  });
+  const data = tsList.map((t, idx) => {
+    const row: any = { idx, ts: t };
+    for (const pm of pointMaps) {
+      const v = pm.map.get(t);
+      if (v) {
+        row[`rssi${pm.id}`] = v.rssi;
+        row[`per${pm.id}`] = v.per;
       }
     }
-    row.ts = t ?? null; // numeric ts for x-axis
     return row;
   });
 
@@ -35,7 +40,7 @@ export default function ChartLive({ series, markers }: { series: DeviceSeries[];
     <ResponsiveContainer width="100%" height={320}>
       <LineChart data={data} margin={{ top: 10, right: 20, bottom: 10, left: 0 }}>
         <CartesianGrid stroke="#eee" />
-        <XAxis dataKey="ts" type="number" domain={[minTs ?? 'dataMin', maxTs ?? 'dataMax']} tickFormatter={(v) => (typeof v === 'number' ? dayjs(v).format('HH:mm:ss') : '')} />
+        <XAxis dataKey="ts" type="number" domain={[minTs ?? 'dataMin', maxTs ?? 'dataMax']} allowDataOverflow tickFormatter={(v) => (typeof v === 'number' ? dayjs(v).format('HH:mm:ss') : '')} />
         <YAxis yAxisId="rssi" domain={[-110, 0]} tickFormatter={(v) => `${v} dBm`} />
         <YAxis yAxisId="per" orientation="right" domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
         <Tooltip />
@@ -66,7 +71,7 @@ export default function ChartLive({ series, markers }: { series: DeviceSeries[];
             animationDuration={0}
           />
         ))}
-        {markerTs.map((ts, i) => (
+        {data.length > 0 && markerTs.map((ts, i) => (
           <ReferenceLine key={`m-${i}`} x={ts} stroke="#b8860b" strokeDasharray="4 4" label={{ value: `S${i + 1}`, position: 'top', fill: '#b8860b', fontSize: 10 }} />
         ))}
       </LineChart>
