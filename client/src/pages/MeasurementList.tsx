@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { api, fmtDuration } from '../lib';
-import ChartLive from '../components/ChartLive';
+import SafeChartLive from '../components/SafeChartLive';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { useNavigate } from 'react-router-dom';
 
@@ -108,7 +108,7 @@ export default function MeasurementList() {
                   </div>
                 </div>
                 <div style={{ marginTop: 8 }}>
-                  <ChartLive series={details.series.map((s: any) => ({ id: s.deviceId, tag: s.tag, points: s.points }))} markers={details.markers?.map((m: any) => m.ts)} />
+                  <SafeChartLive series={details.series.map((s: any) => ({ id: s.deviceId, tag: s.tag, points: s.points }))} markers={details.markers?.map((m: any) => m.ts)} />
                 </div>
                 {details.perSub && (
                   <div style={{ marginTop: 12 }}>

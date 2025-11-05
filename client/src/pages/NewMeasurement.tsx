@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../lib';
-import ChartLive from '../components/ChartLive';
+import SafeChartLive from '../components/SafeChartLive';
 import GpsStatus from '../components/GpsStatus';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -155,7 +155,7 @@ export default function NewMeasurement() {
         </div>
       )}
       <div className="card">
-        <ChartLive series={series} markers={mode === 'continous' ? markersRef.current : undefined} />
+        <SafeChartLive series={series} markers={mode === 'continous' ? markersRef.current : undefined} />
       </div>
       {live?.gps?.source === 'mobile' && (
         <div style={{ padding: 10, border: '1px dashed #bbb', borderRadius: 6 }}>
