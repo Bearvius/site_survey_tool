@@ -1,5 +1,5 @@
-import React from 'react';
-import { LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
+import React, { useEffect, useRef, useState } from 'react';
+import { LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, Legend, ReferenceLine } from 'recharts';
 import dayjs from 'dayjs';
 
 type DeviceSeries = {
@@ -9,6 +9,25 @@ type DeviceSeries = {
 };
 
 export default function ChartLive({ series, markers }: { series: DeviceSeries[]; markers?: number[] }) {
+	// Measure container width ourselves to avoid ResponsiveContainer-related invariant crashes
+	const containerRef = useRef<HTMLDivElement | null>(null);
+	const [width, setWidth] = useState<number>(0);
+	const height = 320;
+	useEffect(() => {
+		if (!containerRef.current) return;
+		const el = containerRef.current;
+		const ro = new ResizeObserver((entries) => {
+			for (const entry of entries) {
+				const w = entry.contentRect.width;
+				if (Number.isFinite(w)) setWidth(w);
+			}
+		});
+		ro.observe(el);
+		// initial measure
+		const rect = el.getBoundingClientRect();
+		if (rect && rect.width) setWidth(rect.width);
+		return () => ro.disconnect();
+	}, []);
 	// Build rows based on the union of timestamps across all series to avoid index-based misalignment
 	const tsSet = new Set<number>();
 	for (const s of series) for (const p of s.points) if (Number.isFinite(p.t)) tsSet.add(p.t);
@@ -35,10 +54,10 @@ export default function ChartLive({ series, markers }: { series: DeviceSeries[];
 	const maxTs = tsValues.length ? Math.max(...tsValues) : undefined;
 	const hasData = typeof minTs === 'number' && typeof maxTs === 'number' && Number.isFinite(minTs) && Number.isFinite(maxTs);
 
-	// If there's no data yet, render a lightweight placeholder to avoid Recharts invariant errors
-	if (!hasData) {
+		// If no width yet or no data yet, render a lightweight placeholder to avoid Recharts invariant errors
+		if (!hasData || !width || width < 50) {
 		return (
-			<div style={{ height: 320, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280' }}>
+				<div ref={containerRef} style={{ height, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280' }}>
 				Waiting for data…
 			</div>
 		);
@@ -56,15 +75,14 @@ export default function ChartLive({ series, markers }: { series: DeviceSeries[];
 		? (markers || []).filter((ts) => typeof ts === 'number' && Number.isFinite(ts) && ts >= xMin && ts <= xMax)
 		: [];
 
-	return (
-		<ResponsiveContainer width="100%" height={320}>
-			<LineChart data={data} margin={{ top: 10, right: 20, bottom: 10, left: 0 }}>
+		return (
+			<div ref={containerRef} style={{ width: '100%', height }}>
+				<LineChart width={Math.max(50, Math.floor(width))} height={height} data={data} margin={{ top: 10, right: 20, bottom: 10, left: 0 }}>
 				<CartesianGrid stroke="#eee" />
 				<XAxis
 					dataKey="ts"
 					type="number"
 					domain={[xMin, xMax]}
-					allowDataOverflow
 					tickFormatter={(v) => (typeof v === 'number' ? dayjs(v).format('HH:mm:ss') : '')}
 				/>
 				<YAxis yAxisId="rssi" domain={[-110, 0]} tickFormatter={(v) => `${v} dBm`} />
@@ -99,11 +117,11 @@ export default function ChartLive({ series, markers }: { series: DeviceSeries[];
 						connectNulls
 					/>
 				))}
-				{canDrawMarkers && markerTs.map((ts, i) => (
+						{canDrawMarkers && markerTs.map((ts, i) => (
 					<ReferenceLine key={`m-${i}`} x={ts} stroke="#b8860b" strokeDasharray="4 4" />
 				))}
-			</LineChart>
-		</ResponsiveContainer>
+					</LineChart>
+				</div>
 	);
 }
 
