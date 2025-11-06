@@ -17,11 +17,21 @@ export default function SafeChartLive(props: any) {
 
 	useEffect(() => {
 		let active = true;
+			const qp = new URLSearchParams(window.location.search);
+			const force = qp.get('chart'); // 'recharts' | 'basic' | null
+			if (force === 'basic') {
+				console.debug('[SafeChartLive] Forcing basic chart via ?chart=basic');
+				setMode('basic');
+				return () => { active = false; };
+			}
+
+			console.debug('[SafeChartLive] Loading ChartLive (Recharts)...');
 		import('./ChartLive')
 			.then((mod) => {
 				if (!active) return;
 				ChartRef.current = (mod as any).default || (mod as any);
 				setMode('recharts');
+					console.debug('[SafeChartLive] Recharts chart loaded');
 			})
 			.catch((err) => {
 				console.warn('ChartLive import failed, using basic chart fallback', err);
