@@ -1,34 +1,22 @@
 import React, { useEffect, useRef, useState } from 'react';
 import BasicChart from './basic/BasicChart';
 
-// Dynamically import the Recharts-based ChartLive. If the environment is incompatible
-// (older Pi browser that throws on Symbol.toStringTag writes to built-ins), skip loading
-// Recharts and render a lightweight SVG fallback instead.
+class ChartErrorBoundary extends React.Component<{ onError: () => void; children: React.ReactNode }>{
+	componentDidCatch() {
+		this.props.onError();
+	}
+	render() { return this.props.children as any; }
+}
+
+// Dynamically import the Recharts-based ChartLive. Try it first; if the import or render
+// fails (as on some Pi browsers), fall back to a minimal SVG chart. This avoids aggressively
+// blocking Recharts on modern browsers (e.g., your Windows PC).
 export default function SafeChartLive(props: any) {
 	const ChartRef = useRef<null | React.ComponentType<any>>(null);
 	const [mode, setMode] = useState<'loading' | 'recharts' | 'basic'>('loading');
 
 	useEffect(() => {
 		let active = true;
-
-		// Compatibility pre-check: detect read-only toStringTag on DataView/Set prototypes.
-		try {
-			const sym: any = (Symbol as any)?.toStringTag;
-			if (typeof sym !== 'undefined') {
-				if (typeof (DataView as any) !== 'undefined') {
-					const dvDesc = Object.getOwnPropertyDescriptor((DataView as any).prototype, sym);
-					if (dvDesc && dvDesc.writable === false) throw new Error('dv_toStringTag_readonly');
-				}
-				if (typeof (Set as any) !== 'undefined') {
-					const setDesc = Object.getOwnPropertyDescriptor((Set as any).prototype, sym);
-					if (setDesc && setDesc.writable === false) throw new Error('set_toStringTag_readonly');
-				}
-			}
-		} catch (e) {
-			if (active) setMode('basic');
-			return () => { active = false; };
-		}
-
 		import('./ChartLive')
 			.then((mod) => {
 				if (!active) return;
@@ -40,14 +28,17 @@ export default function SafeChartLive(props: any) {
 				if (!active) return;
 				setMode('basic');
 			});
-
 		return () => { active = false; };
 	}, []);
 
 	if (mode === 'loading') return <div>Loading chart…</div>;
 	if (mode === 'recharts' && ChartRef.current) {
 		const C = ChartRef.current;
-		return <C {...props} />;
+		return (
+			<ChartErrorBoundary onError={() => setMode('basic')}>
+				<C {...props} />
+			</ChartErrorBoundary>
+		);
 	}
 	return (
 		<div>
