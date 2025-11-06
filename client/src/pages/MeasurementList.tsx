@@ -3,8 +3,9 @@ import { api, fmtDuration } from '../lib';
 import SafeChartLive from '../components/SafeChartLive';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { useNavigate } from 'react-router-dom';
+import dayjs from 'dayjs';
 
-type Item = { number: number; id: string; name: string; timestamp: string; filename: string; durationSec: number; avgRssi: number; avgPer: number; type?: 'spot' | 'continous' };
+type Item = { number: number; id: string; name: string; timestamp: string; filename: string; durationSec: number; avgRssi: number; avgPer: number; type?: 'spot' | 'continous'; formattedTimestamp?: string };
 
 export default function MeasurementList() {
   const nav = useNavigate();
@@ -16,10 +17,17 @@ export default function MeasurementList() {
 
   async function load() {
     const { data } = await api.get<Item[]>('/measurements');
-    setItems(data);
+    // Sort by timestamp ascending and format timestamps
+    const sorted = data
+      .sort((a: Item, b: Item) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+      .map((item: Item) => ({
+        ...item,
+        formattedTimestamp: dayjs(item.timestamp).format('HH:mm:ss DD-MMM-YYYY')
+      }));
+    setItems(sorted);
   }
   useEffect(() => { load(); }, []);
-  useEffect(() => { api.get('/settings').then((r) => r.data?.thresholds && setThresholds(r.data.thresholds)).catch(() => {}); }, []);
+  useEffect(() => { api.get('/settings').then((r: any) => r.data?.thresholds && setThresholds(r.data.thresholds)).catch(() => {}); }, []);
 
   async function onDelete(i: Item) {
     try {
@@ -55,13 +63,13 @@ export default function MeasurementList() {
               <tr key={i.id}>
                 <td>{i.number}</td>
                 <td>{i.name}</td>
-                <td>{i.timestamp}</td>
+                <td>{i.formattedTimestamp}</td>
                 <td>{fmtDuration(i.durationSec)}</td>
                 <td>{i.avgRssi} dBm</td>
                 <td>{i.avgPer}%</td>
                 <td>{i.type ?? (i.filename.includes('_continous') ? 'continous' : 'spot')}</td>
                 <td>
-                  <button className="btn" onClick={() => { setView(i); setDetails(null); api.get(`/measurements/${i.filename}/details`).then((r) => setDetails(r.data)); }}>View</button>{' '}
+                  <button className="btn" onClick={() => { setView(i); setDetails(null); api.get(`/measurements/${i.filename}/details`).then((r: any) => setDetails(r.data)); }}>View</button>{' '}
                   <button className="btn btn-danger" onClick={() => setConfirm(i)}>Delete</button>
                 </td>
               </tr>
