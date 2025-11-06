@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, Legend, ReferenceLine } from 'recharts';
 import dayjs from 'dayjs';
 
 type DeviceSeries = {
@@ -8,120 +7,178 @@ type DeviceSeries = {
 	points: { t: number; rssi: number; per: number }[];
 };
 
+// Professional SVG-based chart without Recharts dependencies to eliminate invariant crashes
 export default function ChartLive({ series, markers }: { series: DeviceSeries[]; markers?: number[] }) {
-	// Measure container width ourselves to avoid ResponsiveContainer-related invariant crashes
-	const containerRef = useRef<HTMLDivElement | null>(null);
-	const [width, setWidth] = useState<number>(0);
-	const height = 320;
-	useEffect(() => {
-		if (!containerRef.current) return;
-		const el = containerRef.current;
-		const ro = new ResizeObserver((entries) => {
-			for (const entry of entries) {
-				const w = entry.contentRect.width;
-				if (Number.isFinite(w)) setWidth(w);
-			}
-		});
-		ro.observe(el);
-		// initial measure
-		const rect = el.getBoundingClientRect();
-		if (rect && rect.width) setWidth(rect.width);
-		return () => ro.disconnect();
-	}, []);
-	// Build rows based on the union of timestamps across all series to avoid index-based misalignment
-	const tsSet = new Set<number>();
-	for (const s of series) for (const p of s.points) if (Number.isFinite(p.t)) tsSet.add(p.t);
-	const tsList = Array.from(tsSet.values()).sort((a, b) => a - b);
-	const pointMaps = series.map((s) => {
-		const m = new Map<number, { rssi: number; per: number }>();
-		for (const p of s.points) m.set(p.t, { rssi: p.rssi, per: p.per });
-		return { id: s.id, map: m };
-	});
-	const data = tsList.map((t, idx) => {
-		const row: any = { idx, ts: t };
-		for (const pm of pointMaps) {
-			const v = pm.map.get(t);
-			if (v) {
-				row[`rssi${pm.id}`] = v.rssi;
-				row[`per${pm.id}`] = v.per;
-			}
-		}
-		return row;
-	});
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [dimensions, setDimensions] = useState<{ width: number; height: number }>({ width: 0, height: 320 });
 
-	const tsValues: number[] = data.map(d => d.ts).filter((v: any) => typeof v === 'number' && Number.isFinite(v));
-	const minTs = tsValues.length ? Math.min(...tsValues) : undefined;
-	const maxTs = tsValues.length ? Math.max(...tsValues) : undefined;
-	const hasData = typeof minTs === 'number' && typeof maxTs === 'number' && Number.isFinite(minTs) && Number.isFinite(maxTs);
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const el = containerRef.current;
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const w = entry.contentRect.width;
+        if (Number.isFinite(w) && w > 0) {
+          setDimensions({ width: w, height: 320 });
+        }
+      }
+    });
+    ro.observe(el);
+    // Initial measure
+    const rect = el.getBoundingClientRect();
+    if (rect && rect.width) setDimensions({ width: rect.width, height: 320 });
+    return () => ro.disconnect();
+  }, []);
+  // Build unified data structure
+  const allTs: number[] = [];
+  for (const s of series) for (const p of s.points) if (Number.isFinite(p.t)) allTs.push(p.t);
+  if (allTs.length === 0 || dimensions.width < 50) {
+    return (
+      <div ref={containerRef} style={{ width: '100%', height: dimensions.height, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280' }}>
+        Waiting for data…
+      </div>
+    );
+  }
 
-		// If no width yet or no data yet, render a lightweight placeholder to avoid Recharts invariant errors
-		if (!hasData || !width || width < 50) {
-		return (
-				<div ref={containerRef} style={{ height, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280' }}>
-				Waiting for data…
-			</div>
-		);
-	}
+  const minTs = Math.min(...allTs);
+  const maxTs = Math.max(...allTs);
+  const pad = Math.max(1000, (maxTs - minTs) * 0.05);
+  const xMin = minTs === maxTs ? minTs - pad : minTs - pad;
+  const xMax = minTs === maxTs ? maxTs + pad : maxTs + pad;
 
-	// Avoid zero-width domains which can trigger invariant failures on some browsers
-	const pad = Math.max(1, Math.floor((maxTs! - minTs!) * 0.05));
-	const xMin = minTs === maxTs ? (minTs! - 1000) : (minTs! - pad);
-	const xMax = minTs === maxTs ? (maxTs! + 1000) : (maxTs! + pad);
+  // Chart layout
+  const margin = { top: 20, right: 60, bottom: 40, left: 60 };
+  const chartWidth = dimensions.width - margin.left - margin.right;
+  const chartHeight = dimensions.height - margin.top - margin.bottom;
+  const panelHeight = (chartHeight - 20) / 2; // Split for RSSI/PER
 
-	// Filter markers and only draw them when we have at least two points (some Recharts builds
-	// assert on ReferenceLine with degenerate scales right after mount)
-	const canDrawMarkers = data.length >= 2 && Number.isFinite(xMin) && Number.isFinite(xMax) && xMax > xMin;
-	const markerTs: number[] = canDrawMarkers
-		? (markers || []).filter((ts) => typeof ts === 'number' && Number.isFinite(ts) && ts >= xMin && ts <= xMax)
-		: [];
+  // Scaling functions
+  const scaleX = (t: number) => ((t - xMin) / (xMax - xMin)) * chartWidth;
+  const scaleRssi = (v: number) => panelHeight - ((v - (-110)) / (0 - (-110))) * panelHeight;
+  const scalePer = (v: number) => panelHeight - (v / 100) * panelHeight;
 
-		return (
-			<div ref={containerRef} style={{ width: '100%', height }}>
-				<LineChart width={Math.max(50, Math.floor(width))} height={height} data={data} margin={{ top: 10, right: 20, bottom: 10, left: 0 }}>
-				<CartesianGrid stroke="#eee" />
-				<XAxis
-					dataKey="ts"
-					type="number"
-					domain={[xMin, xMax]}
-					tickFormatter={(v) => (typeof v === 'number' ? dayjs(v).format('HH:mm:ss') : '')}
-				/>
-				<YAxis yAxisId="rssi" domain={[-110, 0]} tickFormatter={(v) => `${v} dBm`} />
-				<YAxis yAxisId="per" orientation="right" domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
-				<Tooltip />
-				<Legend />
-				{series.map((s) => (
-					<Line
-						key={`rssi-${s.id}`}
-						yAxisId="rssi"
-						type="monotone"
-						dataKey={`rssi${s.id}`}
-						name={`RSSI D${s.id}${s.tag ? ` (${s.tag})` : ''}`}
-						stroke="#3366cc"
-						dot={false}
-						isAnimationActive={false}
-						animationDuration={0}
-						connectNulls
-					/>
-				))}
-				{series.map((s) => (
-					<Line
-						key={`per-${s.id}`}
-						yAxisId="per"
-						type="monotone"
-						dataKey={`per${s.id}`}
-						name={`PER D${s.id}${s.tag ? ` (${s.tag})` : ''}`}
-						stroke="#dc3912"
-						dot={false}
-						isAnimationActive={false}
-						animationDuration={0}
-						connectNulls
-					/>
-				))}
-						{canDrawMarkers && markerTs.map((ts, i) => (
-					<ReferenceLine key={`m-${i}`} x={ts} stroke="#b8860b" strokeDasharray="4 4" />
-				))}
-					</LineChart>
-				</div>
-	);
+  // Build paths for each device
+  const colors = ['#3366cc', '#dc3912', '#109618', '#990099', '#0099c6', '#dd4477'];
+  const rssiPaths: string[] = [];
+  const perPaths: string[] = [];
+  const legendItems: { color: string; label: string }[] = [];
+
+  series.forEach((s, idx) => {
+    const color = colors[idx % colors.length];
+    const label = `D${s.id}${s.tag ? ` (${s.tag})` : ''}`;
+    legendItems.push({ color, label });
+
+    if (s.points.length > 0) {
+      // RSSI path
+      const rssiCommands: string[] = [];
+      s.points.forEach((p, i) => {
+        const x = scaleX(p.t);
+        const y = scaleRssi(p.rssi);
+        rssiCommands.push(i === 0 ? `M ${x.toFixed(1)} ${y.toFixed(1)}` : `L ${x.toFixed(1)} ${y.toFixed(1)}`);
+      });
+      rssiPaths.push(`<path d="${rssiCommands.join(' ')}" fill="none" stroke="${color}" stroke-width="2"/>`);
+
+      // PER path
+      const perCommands: string[] = [];
+      s.points.forEach((p, i) => {
+        const x = scaleX(p.t);
+        const y = scalePer(p.per);
+        perCommands.push(i === 0 ? `M ${x.toFixed(1)} ${y.toFixed(1)}` : `L ${x.toFixed(1)} ${y.toFixed(1)}`);
+      });
+      perPaths.push(`<path d="${perCommands.join(' ')}" fill="none" stroke="${color}" stroke-width="2"/>`);
+    }
+  });
+
+  // Grid lines and axis labels
+  const rssiTicks = [-110, -100, -90, -80, -70, -60, -50, -40, -30, -20, -10, 0];
+  const perTicks = [0, 20, 40, 60, 80, 100];
+  const timeTicks = 5;
+  const timeInterval = (xMax - xMin) / timeTicks;
+
+  // Marker lines
+  const markerLines = (markers || [])
+    .filter(ts => ts >= xMin && ts <= xMax)
+    .map((ts, i) => {
+      const x = scaleX(ts);
+      return `<line x1="${x}" y1="0" x2="${x}" y2="${chartHeight}" stroke="#b8860b" stroke-dasharray="4 4" stroke-width="1"/>
+              <text x="${x + 2}" y="12" font-size="10" fill="#b8860b">S${i + 1}</text>`;
+    });
+
+  return (
+    <div ref={containerRef} style={{ width: '100%', height: dimensions.height }}>
+      <svg width={dimensions.width} height={dimensions.height} style={{ background: '#fff' }}>
+        <g transform={`translate(${margin.left}, ${margin.top})`}>
+          {/* RSSI Panel */}
+          <g>
+            <rect x={0} y={0} width={chartWidth} height={panelHeight} fill="none" stroke="#e5e7eb"/>
+            <text x={-45} y={panelHeight/2} fontSize="12" fill="#374151" textAnchor="middle" transform={`rotate(-90, -45, ${panelHeight/2})`}>RSSI (dBm)</text>
+            
+            {/* RSSI Grid */}
+            {rssiTicks.map(tick => {
+              const y = scaleRssi(tick);
+              return (
+                <g key={tick}>
+                  <line x1={0} y1={y} x2={chartWidth} y2={y} stroke="#f3f4f6" strokeWidth="1"/>
+                  <text x={-5} y={y + 3} fontSize="10" fill="#6b7280" textAnchor="end">{tick}</text>
+                </g>
+              );
+            })}
+            
+            {/* RSSI Paths */}
+            <g dangerouslySetInnerHTML={{ __html: rssiPaths.join('') }} />
+          </g>
+
+          {/* PER Panel */}
+          <g transform={`translate(0, ${panelHeight + 20})`}>
+            <rect x={0} y={0} width={chartWidth} height={panelHeight} fill="none" stroke="#e5e7eb"/>
+            <text x={-45} y={panelHeight/2} fontSize="12" fill="#374151" textAnchor="middle" transform={`rotate(-90, -45, ${panelHeight/2})`}>PER (%)</text>
+            
+            {/* PER Grid */}
+            {perTicks.map(tick => {
+              const y = scalePer(tick);
+              return (
+                <g key={tick}>
+                  <line x1={0} y1={y} x2={chartWidth} y2={y} stroke="#f3f4f6" strokeWidth="1"/>
+                  <text x={-5} y={y + 3} fontSize="10" fill="#6b7280" textAnchor="end">{tick}</text>
+                </g>
+              );
+            })}
+            
+            {/* PER Paths */}
+            <g dangerouslySetInnerHTML={{ __html: perPaths.join('') }} />
+          </g>
+
+          {/* Time Axis */}
+          <g transform={`translate(0, ${chartHeight})`}>
+            {Array.from({ length: timeTicks + 1 }, (_, i) => {
+              const ts = xMin + i * timeInterval;
+              const x = scaleX(ts);
+              return (
+                <g key={i}>
+                  <line x1={x} y1={0} x2={x} y2={5} stroke="#6b7280"/>
+                  <text x={x} y={18} fontSize="10" fill="#6b7280" textAnchor="middle">
+                    {dayjs(ts).format('HH:mm:ss')}
+                  </text>
+                </g>
+              );
+            })}
+          </g>
+
+          {/* Markers */}
+          <g dangerouslySetInnerHTML={{ __html: markerLines.join('') }} />
+        </g>
+
+        {/* Legend */}
+        <g transform={`translate(${margin.left}, ${dimensions.height - 15})`}>
+          {legendItems.map((item, i) => (
+            <g key={i} transform={`translate(${i * 120}, 0)`}>
+              <line x1={0} y1={0} x2={15} y2={0} stroke={item.color} strokeWidth="2"/>
+              <text x={20} y={4} fontSize="11" fill="#374151">{item.label}</text>
+            </g>
+          ))}
+        </g>
+      </svg>
+    </div>
+  );
 }
 
